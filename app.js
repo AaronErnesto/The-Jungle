@@ -5,29 +5,32 @@ var logger = require('morgan');
 var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
 var exphbs = require('express-handlebars');
+
 var mongoose = require('mongoose');
 
-var index = require('./routes/index');
+var routes = require('./routes/index');
 var users = require('./routes/users');
+var products = require('./routes/products');
+var newP = require('./routes/new');
 
 var app = express();
 
-//Conect to database/
-mongoose.connect('mongodb://localhost/product');
+// Connect to database
+//mongoose.connect('mongodb://localhost/products');
+mongoose.connect(process.env.MONGODB_URI);
 
 
 var db = mongoose.connection;
-db.on('error', console.log.bind(console,'conection error'));
-db.once('open', function(){
-  console.log('conection succesfull!')
 
-});
+db.on('error', console.log.bind(console, 'connection error:'));
 
-
+db.once('open', function() {
+  console.log('Connection Success');
+})
 
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
-app.engine('.hbs', exphbs({defaultlayout: 'layout', extname:'hbs'}));
+app.engine('.hbs', exphbs({defaultLayout: 'layout', extname: '.hbs'}));
 app.set('view engine', 'hbs');
 
 // uncomment after placing your favicon in /public
@@ -38,8 +41,10 @@ app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
-app.use('/', index);
+app.use('/', routes);
 app.use('/users', users);
+app.use('/products', products);
+app.use('/products/new', newP);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
@@ -48,15 +53,29 @@ app.use(function(req, res, next) {
   next(err);
 });
 
-// error handler
-app.use(function(err, req, res, next) {
-  // set locals, only providing error in development
-  res.locals.message = err.message;
-  res.locals.error = req.app.get('env') === 'development' ? err : {};
+// error handlers
 
-  // render the error page
+// development error handler
+// will print stacktrace
+if (app.get('env') === 'development') {
+  app.use(function(err, req, res, next) {
+    res.status(err.status || 500);
+    res.render('error', {
+      message: err.message,
+      error: err
+    });
+  });
+}
+
+// production error handler
+// no stacktraces leaked to user
+app.use(function(err, req, res, next) {
   res.status(err.status || 500);
-  res.render('error');
+  res.render('error', {
+    message: err.message,
+    error: {}
+  });
 });
+
 
 module.exports = app;
